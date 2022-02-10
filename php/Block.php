@@ -68,7 +68,7 @@ class Block {
 		 * We could set a fallback or default className.
 		 */
 		$class_name = isset( $attributes['className'] ) ? $attributes['className'] : '';
-		$post_types = get_post_types( [ 'public' => true ] );
+		$post_types = get_post_types( [ 'public' => true ], 'objects' );
 
 		/**
 		 * This may look redundant for now, but if we want to extend the block further, they can be useful.
@@ -88,7 +88,7 @@ class Block {
 		 * 
 		 * For more advanced cases we can even use action hooks to clear this cache when a post is created or deleted.
 		 */
-		$cache_expiry = 60;
+		$cache_expiry = 10;
 
 		$output = ! empty( $class_name ) ? sprintf( '<div class="%s">', esc_attr( $class_name ) ) : '<div>';
 
@@ -106,22 +106,35 @@ class Block {
 			$all_posts_cache  = sprintf( '<h2>%s</h2>', esc_html__( 'Post Counts', 'site-counts' ) );
 			$all_posts_cache .= '<ul>';
 
-			foreach ( $post_types as $post_type_slug ) {
+			foreach ( $post_types as $post_type_object ) {
 				$post_count = ( new WP_Query(
 					[
-						'post_type'      => $post_type_slug,
+						'post_type'      => $post_type_object->name,
 						'fields'         => 'ids', // Consume low memory in case of a lot of posts.
 						'posts_per_page' => -1,
-						'post_status'    => ( 'attachment' === $post_type_slug ) ? 'inherit' : 'publish',
+						'post_status'    => ( 'attachment' === $post_type_object->name ) ? 'inherit' : 'publish',
 					]
 				) )->post_count;
-				
+
+				$all_posts_cache .= '<li>';
+
 				$all_posts_cache .= sprintf(
-					/* translators: 1: Number of posts under post type 2: Name of the post type eg. Posts/Pages */
-					'<li>' . esc_html__( 'There are %1$s %2$s', 'site-counts' ) . '</li>',
-					esc_html( $post_count ),
-					esc_html( get_post_type_object( $post_type_slug )->labels->name )
+					esc_html(
+						/* translators: 1: Number of posts under post type 2: Singular name 3: Plural name */
+						_nx( // phpcs:ignore WordPress.WP.I18n.MismatchedPlaceholders
+							'There is %1$s %2$s',
+							'There are %1$s %3$s',
+							$post_count,
+							'Number of posts under each of it\'s type',
+							'site-counts'
+						)
+					),
+					$post_count,
+					$post_type_object->labels->singular_name,
+					$post_type_object->labels->name
 				);
+
+				$all_posts_cache .= '</li>';
 			}
 
 			$all_posts_cache .= '</ul>';
@@ -195,13 +208,15 @@ class Block {
 				$matched_posts_cache .= '<h2>';
 	
 				$matched_posts_cache .= sprintf(
-					/* translators: 1: Number of post 2: Tag slug 3: Category slug */
-					_nx(
-						'%1$s post with the tag of %2$s and the category of %3$s',
-						'%1$s posts with the tag of %2$s and the category of %3$s',
-						count( $matching_query_list ),
-						'Number of posts found with the given tag and category',
-						'site-counts'
+					esc_html(
+						/* translators: 1: Number of post 2: Tag slug 3: Category slug */
+						_nx(
+							'%1$s post with the tag of %2$s and the category of %3$s',
+							'%1$s posts with the tag of %2$s and the category of %3$s',
+							count( $matching_query_list ),
+							'Number of posts found with the given tag and category',
+							'site-counts'
+						)
 					),
 					number_format_i18n( count( $matching_query_list ) ),
 					$post_tag,
