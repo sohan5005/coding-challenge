@@ -88,7 +88,7 @@ class Block {
 		 * 
 		 * For more advanced cases we can even use action hooks to clear this cache when a post is created or deleted.
 		 */
-		$cache_expiry = 10;
+		$cache_expiry = 60;
 
 		$output = ! empty( $class_name ) ? sprintf( '<div class="%s">', esc_attr( $class_name ) ) : '<div>';
 
